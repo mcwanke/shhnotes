@@ -1,0 +1,55 @@
+services:
+  api:
+    build: .
+    container_name: shhnotes-api
+    restart: unless-stopped
+
+    ports:
+      - "5444:5444"
+
+    environment:
+      PIPEWIRE_RUNTIME_DIR: /run/pipewire
+      SHHNOTES_TRANSCRIBER_URL: http://transcriber:8000
+
+    volumes:
+      # PipeWire socket for audio access
+      - /run/user/1000/pipewire-0:/run/pipewire/pipewire-0
+      # Output directory
+      - ${HOME}/Documents/shhnotes/transcripts:/root/Documents/shhnotes/transcripts
+
+    depends_on:
+      - transcriber
+
+    networks:
+      - default
+
+  transcriber:
+    image: fedirz/faster-whisper-server:0.5-cuda
+    container_name: shhnotes-transcriber
+    restart: unless-stopped
+
+    ports:
+      - "5445:8000"
+
+    environment:
+      # Transcriber configuration
+      WHISPER_MODEL: large-v2
+      WHISPER_DEVICE: cuda
+      WHISPER_COMPUTE_TYPE: float16
+
+    volumes:
+      # Cache downloaded models
+      - whisper_models:/root/.cache/huggingface
+
+    # GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  whisper_models:
+    driver: local

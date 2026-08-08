@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shhnotes"
+version = "0.1.0"
+description = "Local voice transcription service for Fedora Linux"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "requests",
+    "click",
+    "numpy",
+    "scipy",
+]
+
+[project.scripts]
+shhnotes = "shhnotes.cli:cli"
+
+[tool.setuptools]
+packages = ["shhnotes"]

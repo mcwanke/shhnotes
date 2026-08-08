@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+requests
+click
+numpy
+scipy

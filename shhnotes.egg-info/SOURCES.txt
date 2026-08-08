@@ -1,0 +1,17 @@
+LICENSE
+pyproject.toml
+shhnotes/__init__.py
+shhnotes/__main__.py
+shhnotes/api.py
+shhnotes/audio.py
+shhnotes/cli.py
+shhnotes/config.py
+shhnotes/output.py
+shhnotes/service.py
+shhnotes/transcriber.py
+shhnotes.egg-info/PKG-INFO
+shhnotes.egg-info/SOURCES.txt
+shhnotes.egg-info/dependency_links.txt
+shhnotes.egg-info/entry_points.txt
+shhnotes.egg-info/requires.txt
+shhnotes.egg-info/top_level.txt

@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: shhnotes
+Version: 0.1.0
+Summary: Local voice transcription service for Fedora Linux
+Requires-Python: >=3.10
+License-File: LICENSE
+Requires-Dist: fastapi
+Requires-Dist: uvicorn
+Requires-Dist: requests
+Requires-Dist: click
+Requires-Dist: numpy
+Requires-Dist: scipy
+Dynamic: license-file

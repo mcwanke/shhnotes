@@ -2,9 +2,9 @@
 
 import logging
 import subprocess
-import time
-from pathlib import Path
 from typing import Optional
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -62,66 +62,81 @@ class AudioCapture:
         )
         return False
 
-    def record(self, output_file: str, duration_sec: int) -> bool:
+    def start_recording(self) -> bool:
         """
-        Record audio from the configured sink to a WAV file.
+        Start streaming audio from the configured sink.
 
-        Records at 16kHz mono PCM (optimal for faster-whisper).
-
-        Args:
-            output_file: Path to save the WAV file
-            duration_sec: Duration to record in seconds
+        Spawns pw-record process that outputs raw PCM to stdout (16kHz mono).
 
         Returns:
-            True if recording succeeded, False otherwise
+            True if process started successfully, False otherwise.
         """
-        output_path = Path(output_file)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        # Get the numeric ID for the sink (pw-record requires ID, not name)
+        sinks = list_pipewire_sinks()
+        if self.sink_name not in sinks:
+            logger.error(f"PipeWire sink '{self.sink_name}' not found")
+            return False
+
+        sink_id = sinks[self.sink_name]
 
         cmd = [
             "pw-record",
-            "--format=s16",  # 16-bit signed PCM (compatible with WAV)
+            "--format=s16",  # 16-bit signed PCM
             "--rate=16000",  # 16 kHz for faster-whisper
             "--channels=1",  # Mono
             "--latency=20ms",  # Low-latency buffer
-            f"--target={self.sink_name}",
-            str(output_file),
+            f"--target={sink_id}",
+            "-",  # Output to stdout
         ]
 
-        logger.info(f"Starting audio capture: {output_file} ({duration_sec}s)")
+        logger.info(f"Starting audio capture from sink: {self.sink_name}")
         logger.debug(f"pw-record command: {' '.join(cmd)}")
 
         try:
             self._recording_process = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=0,
             )
-
-            # Wait for recording duration + buffer margin
-            time.sleep(duration_sec)
-
-            # Terminate gracefully
-            self._recording_process.terminate()
-            try:
-                self._recording_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                logger.warning("pw-record did not terminate, killing...")
-                self._recording_process.kill()
-                self._recording_process.wait()
-
-            if output_path.exists():
-                file_size_mb = output_path.stat().st_size / (1024 * 1024)
-                logger.info(f"Audio capture complete: {output_file} ({file_size_mb:.1f} MB)")
-                return True
-            else:
-                logger.error(f"Output file not created: {output_file}")
-                return False
-
+            logger.info("Audio capture started")
+            return True
         except FileNotFoundError:
             logger.error("pw-record not found. Install PipeWire tools: sudo dnf install pipewire-tools")
             return False
         except Exception as e:
-            logger.error(f"Audio capture failed: {e}")
+            logger.error(f"Failed to start audio capture: {e}")
             return False
+
+    def read_chunk(self, num_samples: int = 16000) -> Optional[np.ndarray]:
+        """
+        Read audio chunk from the recording stream.
+
+        Args:
+            num_samples: Number of audio samples to read (default: 1 second at 16kHz).
+
+        Returns:
+            Numpy array of int16 samples, or None if stream ended or error.
+        """
+        if not self._recording_process or not self._recording_process.stdout:
+            logger.error("Recording not started")
+            return None
+
+        try:
+            # 16-bit PCM = 2 bytes per sample
+            byte_size = num_samples * 2
+            data = self._recording_process.stdout.read(byte_size)
+
+            if not data:
+                logger.debug("Audio stream ended")
+                return None
+
+            audio_chunk = np.frombuffer(data, dtype=np.int16)
+            return audio_chunk
+
+        except Exception as e:
+            logger.error(f"Error reading audio chunk: {e}")
+            return None
 
     def stop(self) -> None:
         """Stop the current recording."""
