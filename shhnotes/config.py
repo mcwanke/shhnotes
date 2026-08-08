@@ -3,7 +3,7 @@
 from pathlib import Path
 
 # Audio capture
-PIPEWIRE_SINK_NAME = "obs-monitor"  # PipeWire virtual sink to capture from
+PIPEWIRE_SINK_NAME = "Vitrual_Shh"  # PipeWire virtual sink to capture from
 
 # Transcription
 WHISPER_MODEL = "large-v2"  # faster-whisper model size
